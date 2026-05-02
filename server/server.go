@@ -3,19 +3,25 @@ package server
 import (
 	"errors"
 	"net"
+	"strings"
 )
 
 type Server struct {
-	host string
-	port string
+	ConnectionType string
+	Host           string
+	Port           string
 }
 
-func (s *Server) NewServer(host, port string) error {
-	l, err := net.Listen("tcp", host+":"+port)
+func NewServer(connectionType, host, port string) (net.Listener, error) {
+	l, err := net.Listen(connectionType, host+":"+port)
 	if err != nil {
-		return errors.New("[ERROR]: connection failed")
+		return nil, errors.New("[ERROR]: falied to listen server")
 	}
 
+	return l, nil
+}
+
+func MessageHandler(l net.Listener) error {
 	buf := make([]byte, 1024)
 
 	for {
@@ -23,14 +29,23 @@ func (s *Server) NewServer(host, port string) error {
 		if err != nil {
 			return errors.New("[ERROR]: connection lost")
 		}
+		defer conn.Close()
 
-		_, err = conn.Read(buf)
+		n, err := conn.Read(buf)
 		if err != nil {
-			break
+			return err
 		}
 
+		msg := string(buf[:n])
+
+		HealthHandler(msg, conn)
+	}
+}
+
+func HealthHandler(str string, conn net.Conn) {
+	str = strings.ToLower(strings.TrimSpace(str))
+
+	if str == "ping" {
 		conn.Write([]byte("+PONG\r\n"))
 	}
-
-	return nil
 }
