@@ -20,7 +20,7 @@ func main() {
 	}
 	fmt.Println("[INFO]: server succesfully run.")
 
-	if err = server.MessageHandler(l); err != nil {
+	if err = server.ListenHandler(l); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

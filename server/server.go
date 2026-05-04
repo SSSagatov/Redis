@@ -2,6 +2,8 @@ package server
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"net"
 	"strings"
 )
@@ -21,25 +23,43 @@ func NewServer(connectionType, host, port string) (net.Listener, error) {
 	return l, nil
 }
 
-func MessageHandler(l net.Listener) error {
-	buf := make([]byte, 1024)
+func ListenHandler(l net.Listener) error {
+	defer l.Close()
 
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			return errors.New("[ERROR]: connection lost")
+			return errors.New("[ERROR]: ")
 		}
-		defer conn.Close()
 
+		go RequestHandler(conn)
+	}
+}
+
+func RequestHandler(conn net.Conn) {
+	defer conn.Close()
+	buf := make([]byte, 1024)
+
+	for {
 		n, err := conn.Read(buf)
 		if err != nil {
-			return err
+			if err.Error() != "EOF" {
+				log.Println(err)
+			}
+			break
 		}
 
-		msg := string(buf[:n])
+		message := string(buf[:n])
 
-		HealthHandler(msg, conn)
+		response := fmt.Sprintf("%s", message)
+
+		_, err = conn.Write([]byte(response))
+		if err != nil {
+			log.Println(err)
+			break
+		}
 	}
+
 }
 
 func HealthHandler(str string, conn net.Conn) {
